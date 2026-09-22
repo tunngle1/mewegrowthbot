@@ -69,8 +69,19 @@ def handle_lead():
         return jsonify({"status": "ok"}), 200
     
     try:
+        if not request.is_json:
+            return jsonify({"status": "error", "message": "Expected JSON data"}), 400
+        
         data = request.json
         logger.info(f"Получена заявка: {data}")
+        
+        # Валидация обязательных полей
+        if not data.get('name'):
+            return jsonify({"status": "error", "message": "Поле 'name' обязательно"}), 400
+        if not data.get('what'):
+            return jsonify({"status": "error", "message": "Поле 'what' обязательно"}), 400
+        if not data.get('contact'):
+            return jsonify({"status": "error", "message": "Поле 'contact' обязательно"}), 400
         
         message = f"""
 📝 <b>НОВАЯ ЗАЯВКА С САЙТА</b>
@@ -96,11 +107,13 @@ def handle_lead():
         if success:
             return jsonify({"status": "success", "message": "Заявка отправлена"}), 200
         else:
-            return jsonify({"status": "error", "message": "Ошибка при отправке - бот не добавлен в чат"}), 500
+            return jsonify({"status": "error", "message": "Ошибка при отправке в Telegram - бот не добавлен в чат"}), 500
             
+    except json.JSONDecodeError:
+        return jsonify({"status": "error", "message": "Invalid JSON format"}), 400
     except Exception as e:
         logger.error(f"Ошибка при обработке заявки: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
 
 @app.route('/xray', methods=['POST', 'OPTIONS'])
 def handle_xray():
