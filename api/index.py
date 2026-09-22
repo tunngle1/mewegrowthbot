@@ -10,33 +10,23 @@ app = Flask(__name__)
 CORS(app)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID', '5359766772')  # Используем chat_id по умолчанию
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def load_admin_chat_id() -> str:
-    """Возвращает chat_id из переменной окружения или использует значение по умолчанию"""
-    return ADMIN_CHAT_ID
-
-def send_telegram_message(text: str, chat_id: str = None) -> bool:
+def send_telegram_message(text: str, chat_id: str) -> bool:
     """Отправка сообщения через Telegram API"""
-    target_chat_id = chat_id or load_admin_chat_id()
-    
-    if not target_chat_id:
-        logger.error("Не установлен CHAT_ID для отправки сообщений")
-        return False
-    
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
-        "chat_id": target_chat_id,
+        "chat_id": chat_id,
         "text": text,
         "parse_mode": "HTML"
     }
     try:
         response = requests.post(url, json=payload, timeout=10)
         if response.status_code == 200:
-            logger.info(f"Сообщение успешно отправлено в чат {target_chat_id}")
+            logger.info(f"Сообщение успешно отправлено в чат {chat_id}")
             return True
         else:
             logger.error(f"Ошибка Telegram API: {response.status_code} - {response.text}")
@@ -50,10 +40,15 @@ def test():
     """Тестовый endpoint"""
     return jsonify({"status": "test working"}), 200
 
+@app.route('/start', methods=['GET'])
+def start():
+    """Команда start для проверки работы бота"""
+    return jsonify({"status": "bot working", "message": "MeWeGo Bot is ready to receive form submissions"}), 200
+
 @app.route('/', methods=['GET'])
 def root():
     """Корневой endpoint"""
-    return jsonify({"status": "MeWeGo Bot API", "endpoints": ["/test", "/lead", "/xray"]}), 200
+    return jsonify({"status": "MeWeGo Bot API", "endpoints": ["/test", "/start", "/lead", "/xray"]}), 200
 
 @app.route('/lead', methods=['POST', 'OPTIONS'])
 def handle_lead():
