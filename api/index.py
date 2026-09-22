@@ -10,30 +10,14 @@ app = Flask(__name__)
 CORS(app)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-ADMIN_CHAT_FILE = '../admin_chat_id.json'
+ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID', '5359766772')
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def load_admin_chat_id() -> str:
-    """Загрузка chat_id администратора из файла"""
-    try:
-        if os.path.exists(ADMIN_CHAT_FILE):
-            with open(ADMIN_CHAT_FILE, 'r') as f:
-                data = json.load(f)
-                return data.get('chat_id')
-    except Exception as e:
-        logger.error(f"Ошибка при загрузке chat_id: {e}")
-    return None
-
-def save_admin_chat_id(chat_id: str) -> None:
-    """Сохранение chat_id администратора в файл"""
-    try:
-        with open(ADMIN_CHAT_FILE, 'w') as f:
-            json.dump({'chat_id': chat_id}, f)
-        logger.info(f"Chat ID {chat_id} сохранён как администратор")
-    except Exception as e:
-        logger.error(f"Ошибка при сохранении chat_id: {e}")
+    """Возвращает chat_id из переменной окружения"""
+    return ADMIN_CHAT_ID
 
 def send_telegram_message(text: str, chat_id: str) -> bool:
     """Отправка сообщения через Telegram API"""
@@ -68,11 +52,7 @@ def start():
 @app.route('/setchat', methods=['GET'])
 def set_chat():
     """Команда для установки chat_id администратора через API"""
-    chat_id = request.args.get('chat_id')
-    if chat_id:
-        save_admin_chat_id(chat_id)
-        return jsonify({"status": "success", "message": f"Chat ID {chat_id} сохранён"}), 200
-    return jsonify({"status": "error", "message": "Укажите chat_id параметр"}), 400
+    return jsonify({"status": "info", "message": "Используйте переменную окружения ADMIN_CHAT_ID на Vercel"}), 200
 
 @app.route('/', methods=['GET'])
 def root():
@@ -122,7 +102,7 @@ def handle_lead():
         # Получаем chat_id администратора
         admin_chat_id = load_admin_chat_id()
         if not admin_chat_id:
-            return jsonify({"status": "error", "message": "Chat ID администратора не установлен. Используйте /setchat?chat_id=YOUR_CHAT_ID"}), 500
+            return jsonify({"status": "error", "message": "Chat ID администратора не установлен в переменной окружения"}), 500
         
         success = send_telegram_message(message, admin_chat_id)
         
@@ -162,7 +142,7 @@ def handle_xray():
         # Получаем chat_id администратора
         admin_chat_id = load_admin_chat_id()
         if not admin_chat_id:
-            return jsonify({"status": "error", "message": "Chat ID администратора не установлен"}), 500
+            return jsonify({"status": "error", "message": "Chat ID администратора не установлен в переменной окружения"}), 500
         
         success = send_telegram_message(message, admin_chat_id)
         
