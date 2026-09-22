@@ -10,27 +10,14 @@ app = Flask(__name__)
 CORS(app)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID')
-ADMIN_CHAT_FILE = '../admin_chat_id.json'
+ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID', '5359766772')  # Используем chat_id по умолчанию
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def load_admin_chat_id() -> str:
-    """Загрузка chat_id администратора из переменной окружения или файла"""
-    # Сначала проверяем переменную окружения
-    if ADMIN_CHAT_ID:
-        return ADMIN_CHAT_ID
-    
-    # Если нет переменной, пробуем файл
-    try:
-        if os.path.exists(ADMIN_CHAT_FILE):
-            with open(ADMIN_CHAT_FILE, 'r') as f:
-                data = json.load(f)
-                return data.get('chat_id')
-    except Exception as e:
-        logger.error(f"Ошибка при загрузке chat_id из файла: {e}")
-    return None
+    """Возвращает chat_id из переменной окружения или использует значение по умолчанию"""
+    return ADMIN_CHAT_ID
 
 def send_telegram_message(text: str, chat_id: str = None) -> bool:
     """Отправка сообщения через Telegram API"""
