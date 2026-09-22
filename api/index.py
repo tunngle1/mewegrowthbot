@@ -57,7 +57,12 @@ def test():
     """Тестовый endpoint"""
     return jsonify({"status": "test working"}), 200
 
-@app.route('/lead', methods=['POST', 'OPTIONS'])
+@app.route('/', methods=['GET'])
+def root():
+    """Корневой endpoint"""
+    return jsonify({"status": "MeWeGo Bot API", "endpoints": ["/api/test", "/api/lead", "/api/xray"]}), 200
+
+@app.route('/api/lead', methods=['POST', 'OPTIONS'])
 def handle_lead():
     """Обработка заявки с формы сайта"""
     if request.method == 'OPTIONS':
@@ -97,7 +102,7 @@ def handle_lead():
         logger.error(f"Ошибка при обработке заявки: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/xray', methods=['POST', 'OPTIONS'])
+@app.route('/api/xray', methods=['POST', 'OPTIONS'])
 def handle_xray():
     """Обработка результатов Business X-Ray"""
     if request.method == 'OPTIONS':
