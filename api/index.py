@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID', '5359766772')
+ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID', '-5359766772')
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
