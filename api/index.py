@@ -10,10 +10,30 @@ app = Flask(__name__)
 CORS(app)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+ADMIN_CHAT_FILE = '../admin_chat_id.json'
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def load_admin_chat_id() -> str:
+    """Загрузка chat_id администратора из файла"""
+    try:
+        if os.path.exists(ADMIN_CHAT_FILE):
+            with open(ADMIN_CHAT_FILE, 'r') as f:
+                data = json.load(f)
+                return data.get('chat_id')
+    except Exception as e:
+        logger.error(f"Ошибка при загрузке chat_id: {e}")
+    return None
+
+def save_admin_chat_id(chat_id: str) -> None:
+    """Сохранение chat_id администратора в файл"""
+    try:
+        with open(ADMIN_CHAT_FILE, 'w') as f:
+            json.dump({'chat_id': chat_id}, f)
+        logger.info(f"Chat ID {chat_id} сохранён как администратор")
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении chat_id: {e}")
 
 def send_telegram_message(text: str, chat_id: str) -> bool:
     """Отправка сообщения через Telegram API"""
@@ -45,10 +65,19 @@ def start():
     """Команда start для проверки работы бота"""
     return jsonify({"status": "bot working", "message": "MeWeGo Bot is ready to receive form submissions"}), 200
 
+@app.route('/setchat', methods=['GET'])
+def set_chat():
+    """Команда для установки chat_id администратора через API"""
+    chat_id = request.args.get('chat_id')
+    if chat_id:
+        save_admin_chat_id(chat_id)
+        return jsonify({"status": "success", "message": f"Chat ID {chat_id} сохранён"}), 200
+    return jsonify({"status": "error", "message": "Укажите chat_id параметр"}), 400
+
 @app.route('/', methods=['GET'])
 def root():
     """Корневой endpoint"""
-    return jsonify({"status": "MeWeGo Bot API", "endpoints": ["/test", "/start", "/lead", "/xray"]}), 200
+    return jsonify({"status": "MeWeGo Bot API", "endpoints": ["/test", "/start", "/setchat", "/lead", "/xray"]}), 200
 
 @app.route('/lead', methods=['POST', 'OPTIONS'])
 def handle_lead():
@@ -90,12 +119,17 @@ def handle_lead():
 ⏰ <b>Время:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         """.strip()
         
-        success = send_telegram_message(message)
+        # Получаем chat_id администратора
+        admin_chat_id = load_admin_chat_id()
+        if not admin_chat_id:
+            return jsonify({"status": "error", "message": "Chat ID администратора не установлен. Используйте /setchat?chat_id=YOUR_CHAT_ID"}), 500
+        
+        success = send_telegram_message(message, admin_chat_id)
         
         if success:
             return jsonify({"status": "success", "message": "Заявка отправлена"}), 200
         else:
-            return jsonify({"status": "error", "message": "Ошибка при отправке в Telegram - бот не добавлен в чат"}), 500
+            return jsonify({"status": "error", "message": "Ошибка при отправке в Telegram"}), 500
             
     except json.JSONDecodeError:
         return jsonify({"status": "error", "message": "Invalid JSON format"}), 400
@@ -105,6 +139,41 @@ def handle_lead():
 
 @app.route('/xray', methods=['POST', 'OPTIONS'])
 def handle_xray():
+    """Обработка результатов Business X-Ray"""
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+    
+    try:
+        data = request.json
+        logger.info(f"Получен X-Ray результат: {data}")
+        
+        message = f"""
+🔍 <b>РЕЗУЛЬТАТ BUSINESS X-RAY</b>
+
+👤 <b>Имя:</b> {data.get('name', 'Не указано')}
+🏢 <b>Компания:</b> {data.get('company', 'Не указано')}
+
+📊 <b>Результаты опроса:</b>
+{data.get('results', 'Нет результатов')}
+
+⏰ <b>Время:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        """.strip()
+        
+        # Получаем chat_id администратора
+        admin_chat_id = load_admin_chat_id()
+        if not admin_chat_id:
+            return jsonify({"status": "error", "message": "Chat ID администратора не установлен"}), 500
+        
+        success = send_telegram_message(message, admin_chat_id)
+        
+        if success:
+            return jsonify({"status": "success", "message": "Результаты отправлены"}), 200
+        else:
+            return jsonify({"status": "error", "message": "Ошибка при отправке в Telegram"}), 500
+            
+    except Exception as e:
+        logger.error(f"Ошибка при обработке X-Ray: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     """Обработка результатов Business X-Ray"""
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
